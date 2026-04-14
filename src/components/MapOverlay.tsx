@@ -46,10 +46,12 @@ const MapOverlay: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+const SPRING_BACKEND = import.meta.env.VITE_SPRING_BACKEND_URL
+  || (window.location.hostname !== 'localhost' ? 'https://travelview-weather.onrender.com' : 'http://localhost:8080');
 
   // Fetch all cities on mount
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_SPRING_BACKEND_URL || 'http://localhost:8080'}/api/cities`)
+    fetch(`${SPRING_BACKEND}/api/cities`)
       .then((res) => res.json())
       .then((data) => setCities(data))
       .catch(() => {
@@ -162,7 +164,7 @@ const MapOverlay: React.FC = () => {
             marker.openPopup();
 
             // Fetch fresh weather from backend
-            fetch(`${import.meta.env.VITE_SPRING_BACKEND_URL || 'http://localhost:8080'}/api/weather?city=${encodeURIComponent(city.city)}`)
+            fetch(`${SPRING_BACKEND}/api/weather?city=${encodeURIComponent(city.city)}`)
               .then((res) => res.json())
               .then((data: CityWeather) => {
                 marker.setPopupContent(buildPopupHTML(data));

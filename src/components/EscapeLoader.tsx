@@ -11,7 +11,8 @@ export interface WeatherInfo { city: string; tempHighC: number; tempLowC: number
 export interface Review { author: string; authorCountry: string; rating: number; text: string; tip: string; }
 export interface ItineraryData { country: string; summary: string; weatherOverview: WeatherInfo[]; days: DayPlan[]; reviews: Review[]; }
 
-const GROQ_BACKEND = import.meta.env.VITE_GROQ_BACKEND_URL || 'http://localhost:5001';
+const GROQ_BACKEND = import.meta.env.VITE_GROQ_BACKEND_URL
+  || (window.location.hostname !== 'localhost' ? 'https://travelview-groq.onrender.com' : 'http://localhost:5001');
 
 async function generateItinerary(data: BookingData): Promise<ItineraryData> {
   const res = await fetch(`${GROQ_BACKEND}/groq/itinerary`, {
