@@ -6,9 +6,8 @@ import os
 
 app = Flask(__name__)
 
-# CORS: defaults to allow-all for dev; set ALLOWED_ORIGINS on Render for production
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
-CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}}, supports_credentials=True)
+# CORS: allow all origins (no cookie-based auth used)
+CORS(app)
 
 app.register_blueprint(groq_bp)
 
