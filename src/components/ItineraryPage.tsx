@@ -50,14 +50,14 @@ const ItineraryPage: React.FC<Props> = ({ data, bookingData, onBack }) => {
     let cancelled = false;
 
     import('leaflet').then(L => {
-      import('leaflet/dist/leaflet.css');
       if (cancelled || !mapRef.current) return;
       if (mapInstance.current) { mapInstance.current.remove(); mapInstance.current = null; }
 
       requestAnimationFrame(() => {
         if (!mapRef.current || cancelled) return;
+        mapRef.current.style.height = '500px';
         const map = L.map(mapRef.current, { center: [allPlaces[0].lat, allPlaces[0].lon], zoom: 6, zoomControl: false, attributionControl: false });
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(map);
 
         const goldSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="40" viewBox="0 0 28 40"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#dfc99a"/><stop offset="100%" stop-color="#c9a96e"/></linearGradient></defs><path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 26 14 26s14-15.5 14-26C28 6.27 21.73 0 14 0z" fill="url(#g)"/><circle cx="14" cy="14" r="6" fill="#050505"/><circle cx="14" cy="14" r="3" fill="#dfc99a"/></svg>`;
         const icon = L.icon({ iconUrl: `data:image/svg+xml;base64,${btoa(goldSvg)}`, iconSize: [28, 40], iconAnchor: [14, 40], popupAnchor: [0, -42] });
@@ -119,7 +119,9 @@ const ItineraryPage: React.FC<Props> = ({ data, bookingData, onBack }) => {
         }
 
         mapInstance.current = map;
-        setTimeout(() => map.invalidateSize(), 300);
+        setTimeout(() => map.invalidateSize(), 100);
+        setTimeout(() => map.invalidateSize(), 500);
+        setTimeout(() => map.invalidateSize(), 1500);
       });
     });
 
