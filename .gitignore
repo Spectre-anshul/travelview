@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment files (NEVER commit secrets)
+.env
+.env.local
+.env.production
+groq-backend/.env
+
+# IDE
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+groq-backend/__pycache__/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Spring Boot build
+backend/target/
+
+# Test files
+groq-backend/test_result.json
+groq-backend/debug_test.py
+
+# Zip files
+*.zip
