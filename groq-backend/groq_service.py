@@ -28,3 +28,15 @@ def get_groq_feedback(prompt: str) -> str:
         max_tokens=8000,
     )
     return chat_completion.choices[0].message.content
+
+
+def get_groq_chat(messages: list, system_prompt: str) -> str:
+    """Send a multi-turn conversation to Groq and return the assistant reply."""
+    full_messages = [{"role": "system", "content": system_prompt}] + messages
+    chat_completion = client.chat.completions.create(
+        messages=full_messages,
+        model="llama-3.3-70b-versatile",
+        temperature=0.7,
+        max_tokens=1024,
+    )
+    return chat_completion.choices[0].message.content

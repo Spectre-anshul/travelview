@@ -1,64 +1,26 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /* ============================================
-   TravelView AI Chatbot — Gemini 2.0 Flash
+   TravelView AI Chatbot — Groq (Llama 3.3 70B)
    ============================================ */
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
-
-const SYSTEM_PROMPT = `You are **TravelView AI**, the official concierge assistant for the TravelView premium travel platform.
-
-## About TravelView
-TravelView is an elite AI-powered travel concierge. It helps users:
-- Plan and book curated luxury travel experiences in one conversation
-- Get hyper-personalized destination recommendations powered by AI ("Soul Matching")
-- Access real-time weather, local events, and insider tips ("Live Local Intel")
-- Build complete itineraries from scratch with the AI Concierge feature
-- Seamlessly book everything — from chat to check-in in a single tap
-
-## Website Navigation
-- **Home / Hero section**: Scroll to top — "See The World Differently"
-- **Discover (Features)**: Scroll down to the features section showcasing AI Concierge, Soul Matching, Live Local Intel, and Seamless Booking
-- **Stories (Testimonials)**: Further down — real traveler reviews
-- **Get Started / Book Your Curated Escape**: The CTA at the bottom to start booking
-- **Map Button**: Bottom-right corner — opens an interactive world map with live weather for cities
-- **Footer**: Links to Destinations, How It Works, Pricing, About, Careers, Contact, Privacy, Terms
-
-## How Booking Works
-1. Click "Get Started" or "Book Your Curated Escape"
-2. Describe your dream trip in one sentence to the AI Concierge
-3. The AI crafts a bespoke itinerary within seconds
-4. Review, customize, and confirm
-5. From chat to check-in — your entire trip is handled
-
-## How to Curate Your Own Itinerary
-1. Tell the AI your travel dates, budget, interests, and any must-see spots
-2. The Soul Matching algorithm reads your travel DNA
-3. Receive a fully personalized day-by-day plan
-4. Adjust anything — add activities, change hotels, swap destinations
-5. Confirm and book in one tap
-
-## Your Behavior
-- Be warm, enthusiastic, and luxurious in tone — match the premium brand voice
-- Use emojis sparingly but tastefully (✦, 🌍, ✈️)
-- Keep responses concise (2-4 sentences unless the user asks for detail)
-- If the user asks how to navigate the website, give specific section names
-- If the user asks about features, explain them with the TravelView branding
-- If you don't know something specific about pricing or availability, say "Our team will personalize that for you once you click Get Started!"
-- Never break character — you ARE TravelView AI`;
+const GROQ_BACKEND = import.meta.env.VITE_GROQ_BACKEND_URL
+  || (window.location.hostname !== 'localhost' ? 'https://travelview-groq.onrender.com' : 'http://localhost:5001');
 
 interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+interface DisplayMessage {
   role: 'user' | 'model';
   text: string;
 }
 
-const genAI = new GoogleGenerativeAI(API_KEY);
-
 const Chatbot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const [displayMessages, setDisplayMessages] = useState<DisplayMessage[]>([
     {
       role: 'model',
       text: "Welcome to TravelView ✦ I'm your AI concierge — here to help you navigate the site, plan your dream trip, or craft a bespoke itinerary. How can I elevate your journey today?",
@@ -68,12 +30,13 @@ const Chatbot: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const chatRef = useRef<any>(null);
+  // Store the conversation history for the API (role: user | assistant)
+  const historyRef = useRef<ChatMessage[]>([]);
 
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
+  }, [displayMessages, isTyping]);
 
   // Focus input when opened
   useEffect(() => {
@@ -82,49 +45,41 @@ const Chatbot: React.FC = () => {
     }
   }, [isOpen]);
 
-  // Initialize chat session
-  const getChat = useCallback(() => {
-    if (!chatRef.current) {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-      chatRef.current = model.startChat({
-        history: [
-          {
-            role: 'user',
-            parts: [{ text: SYSTEM_PROMPT }],
-          },
-          {
-            role: 'model',
-            parts: [
-              {
-                text: "Understood! I'm TravelView AI, ready to help users explore the platform, navigate the website, book trips, and curate personalized itineraries. I'll maintain a warm, premium tone throughout. How can I assist?",
-              },
-            ],
-          },
-        ],
-      });
-    }
-    return chatRef.current;
-  }, []);
-
   const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed || isTyping) return;
 
-    const userMsg: ChatMessage = { role: 'user', text: trimmed };
-    setMessages((prev) => [...prev, userMsg]);
+    // Add user message to display
+    setDisplayMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
     setInput('');
     setIsTyping(true);
 
-    try {
-      const chat = getChat();
-      const result = await chat.sendMessage(trimmed);
-      const response = await result.response;
-      const botText = response.text();
+    // Add user message to API history
+    historyRef.current = [...historyRef.current, { role: 'user', content: trimmed }];
 
-      setMessages((prev) => [...prev, { role: 'model', text: botText }]);
+    try {
+      const res = await fetch(`${GROQ_BACKEND}/groq/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: historyRef.current }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || `Server error (${res.status})`);
+      }
+
+      const botText = data.reply || "I'm having trouble thinking right now. Please try again ✦";
+
+      // Add assistant reply to API history
+      historyRef.current = [...historyRef.current, { role: 'assistant', content: botText }];
+
+      // Add to display
+      setDisplayMessages((prev) => [...prev, { role: 'model', text: botText }]);
     } catch (err: any) {
-      console.error('Gemini error:', err);
-      setMessages((prev) => [
+      console.error('Groq chat error:', err);
+      setDisplayMessages((prev) => [
         ...prev,
         {
           role: 'model',
@@ -202,7 +157,7 @@ const Chatbot: React.FC = () => {
 
             {/* Messages */}
             <div className="chat-messages">
-              {messages.map((msg, i) => (
+              {displayMessages.map((msg, i) => (
                 <div key={i} className={`chat-msg chat-msg-${msg.role}`}>
                   {msg.role === 'model' && (
                     <div className="chat-msg-avatar">✦</div>
